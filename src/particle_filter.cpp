@@ -89,36 +89,104 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> Landmarks, std::ve
 	   NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	     implement this method and use it as a helper during the updateWeights phase. */
 		 
-	for(uint i = 0; i < observations.size(); i++)
+ 	for(uint i = 0; i < observations.size(); i++)
 	{
 		double x_o = observations[i].x;
 		double y_o = observations[i].y;
-		double MinDist = dist(x_o, y_o, Landmarks[0].x, Landmarks[0].y);
+		double MinDist = numeric_limits<double>::max();
 		
 		for (uint j = 0; j < Landmarks.size(); j++)
 		{
 			double CurrDist = dist(x_o, y_o, Landmarks[j].x, Landmarks[j].y);
 			if(CurrDist < MinDist)
 			{
+				MinDist = CurrDist;
 				observations[i].id = Landmarks[j].id;
 			}
 		}
 	}
-
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
 		const std::vector<LandmarkObs> &observations, const Map &map_landmarks) {
-	// TODO: Update the weights of each particle using a mult-variate Gaussian distribution. You can read
-	//   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
-	// NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
-	//   according to the MAP'S coordinate system. You will need to transform between the two systems.
-	//   Keep in mind that this transformation requires both rotation AND translation (but no scaling).
-	//   The following is a good resource for the theory:
-	//   https://www.willamette.edu/~gorr/classes/GeneralGraphics/Transforms/transforms2d.htm
-	//   and the following is a good resource for the actual equation to implement (look at equation 
-	//   3.33
-	//   http://planning.cs.uiuc.edu/node99.html
+	/* TODO: Update the weights of each particle using a mult-variate Gaussian distribution. You can read
+	     more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
+	   NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
+	     according to the MAP'S coordinate system. You will need to transform between the two systems.
+	     Keep in mind that this transformation requires both rotation AND translation (but no scaling).
+	     The following is a good resource for the theory:
+	     https://www.willamette.edu/~gorr/classes/GeneralGraphics/Transforms/transforms2d.htm
+	     and the following is a good resource for the actual equation to implement (look at equation 
+	     3.33
+	     http://planning.cs.uiuc.edu/node99.html */
+		 
+	/*  Weight update process
+	 *  1. Transform the observations into map coodination regarding to the 
+	 *  2. Extract the landmark, which are found in sensor range
+	 *  3. Associate the observations to the extracted landmarks
+	 *  4. Calculate weights
+	 */
+	
+ 	for( int i = 0; i < num_particles; i++)
+	{
+		double x_p = particles[i].x;
+		double y_p = particles[i].y;
+		double theta_p = particles[i].theta;
+		 
+		/* Transform the observations into map coodination regarding to the */
+  		vector<LandmarkObs> TransformedObs;
+		LandmarkObs TransformObs;
+		
+		for(uint j = 0; j < observations.size(); j++)
+		{
+			TransformObs.x = cos(theta_p) * observations[j].x - sin(theta_p) * observations[j].y + x_p;
+			TransformObs.y = sin(theta_p) * observations[j].x + cos(theta_p) * observations[j].y + y_p;
+			TransformObs.id = observations[j].id;
+			TransformedObs.push_back(TransformObs);
+		}
+		
+		/* Extract the landmark, which are found in sensor range*/
+   		vector<LandmarkObs> ExtractedLandmarks;
+		LandmarkObs Landmark;
+		for(uint j = 0; j < map_landmarks.landmark_list.size(); j++)
+		{
+			double Dist = dist(x_p, y_p, map_landmarks.landmark_list[j].x_f, map_landmarks.landmark_list[j].y_f);
+			
+			if( Dist < sensor_range)
+			{
+				Landmark.x = map_landmarks.landmark_list[j].x_f;
+				Landmark.y = map_landmarks.landmark_list[j].y_f;
+				Landmark.id = map_landmarks.landmark_list[j].id_i;
+				
+				ExtractedLandmarks.push_back(Landmark);
+			}
+		}
+		
+		/* Associate the observations to the extracted landmarks*/
+		dataAssociation(ExtractedLandmarks, TransformedObs);
+		
+		/* Calculate weights */
+		for( uint j = 0; j < TransformedObs.size(); j++)
+		{
+			double x = TransformedObs[j].x;
+			double y = TransformedObs[j].y;
+			double M_x = 0;
+			double M_y = 0;
+			/* Looking for the nearest landmark from the extracted landmark*/
+			for (uint k = 0; k < ExtractedLandmarks.size(); k++)
+			{
+				if(TransformedObs[j].id == ExtractedLandmarks[k].id)
+				{
+					M_x = ExtractedLandmarks[k].x;
+					M_y = ExtractedLandmarks[k].y;
+				}
+			}
+			
+			particles[i].weight *= exp(-pow(x - M_x,2) / 2 / pow(std_landmark[0], 2) - pow(y - M_y, 2) / 2 / pow(std_landmark[1],2))
+									/ 2 / M_PI / std_landmark[0] / std_landmark[1];
+		}
+	}
+	
 }
 
 void ParticleFilter::resample() {
