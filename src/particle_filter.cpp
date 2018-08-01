@@ -17,21 +17,48 @@
 
 #include "particle_filter.h"
 
+#define NUM_PARTICLE   (int)100
+
 using namespace std;
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
-	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of 
-	//   x, y, theta and their uncertainties from GPS) and all weights to 1. 
-	// Add random Gaussian noise to each particle.
-	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
+	/* TODO: Set the number of particles. Initialize all particles to first position (based on estimates of 
+	     x, y, theta and their uncertainties from GPS) and all weights to 1. 
+	   Add random Gaussian noise to each particle.
+	   NOTE: Consult particle_filter.h for more information about this method (and others in this file). */
+		 
+	std::default_random_engine gen;
+	
+	num_particles = NUM_PARTICLE;
 
+	/* define normal distributions for sensor noise*/
+	normal_distribution<double> N_x(0, std[0]);
+	normal_distribution<double> N_y(0, std[1]);
+	normal_distribution<double> N_theta(0, std[2]);
+
+    // init particles
+    for (int i = 0; i < num_particles; i++) 
+	{
+		Particle particle;
+		particle.id = i;
+		particle.x = N_x(gen);
+		particle.y = N_y(gen);
+		particle.theta = N_theta(gen);
+		particle.weight = 1.0;
+		
+		particles.push_back(particle);
+		weights.push_back(1);
+  }
+
+  is_initialized = true;
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) {
-	// TODO: Add measurements to each particle and add random Gaussian noise.
-	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
-	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
-	//  http://www.cplusplus.com/reference/random/default_random_engine/
+	/* TODO: Add measurements to each particle and add random Gaussian noise.
+	   NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
+	   http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
+	   http://www.cplusplus.com/reference/random/default_random_engine/ */
+	
 
 }
 
