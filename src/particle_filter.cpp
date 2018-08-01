@@ -17,6 +17,8 @@
 
 #include "particle_filter.h"
 
+typedef unsigned int uint;
+
 #define NUM_PARTICLE   (int)100
 
 using namespace std;
@@ -81,11 +83,27 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	}
 }
 
-void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
-	// TODO: Find the predicted measurement that is closest to each observed measurement and assign the 
-	//   observed measurement to this particular landmark.
-	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
-	//   implement this method and use it as a helper during the updateWeights phase.
+void ParticleFilter::dataAssociation(std::vector<LandmarkObs> Landmarks, std::vector<LandmarkObs>& observations) {
+	/* TODO: Find the predicted measurement that is closest to each observed measurement and assign the 
+	     observed measurement to this particular landmark.
+	   NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
+	     implement this method and use it as a helper during the updateWeights phase. */
+		 
+	for(uint i = 0; i < observations.size(); i++)
+	{
+		double x_o = observations[i].x;
+		double y_o = observations[i].y;
+		double MinDist = dist(x_o, y_o, Landmarks[0].x, Landmarks[0].y);
+		
+		for (uint j = 0; j < Landmarks.size(); j++)
+		{
+			double CurrDist = dist(x_o, y_o, Landmarks[j].x, Landmarks[j].y);
+			if(CurrDist < MinDist)
+			{
+				observations[i].id = Landmarks[j].id;
+			}
+		}
+	}
 
 }
 
