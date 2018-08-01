@@ -120,8 +120,11 @@ int main()
 		  double highest_weight = -1.0;
 		  Particle best_particle;
 		  double weight_sum = 0.0;
-		  for (int i = 0; i < num_particles; ++i) {
-			if (particles[i].weight > highest_weight) {
+		  
+		  for (int i = 0; i < num_particles; ++i) 
+		  {
+			if (particles[i].weight > highest_weight) 
+			{
 				highest_weight = particles[i].weight;
 				best_particle = particles[i];
 			}

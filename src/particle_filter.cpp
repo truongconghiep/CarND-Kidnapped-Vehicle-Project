@@ -19,7 +19,7 @@
 
 typedef unsigned int uint;
 
-#define NUM_PARTICLE   (int)100
+#define NUM_PARTICLE   (int)101
 
 using namespace std;
 
@@ -49,7 +49,6 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 		particle.weight = 1.0;
 		
 		particles.push_back(particle);
-		weights.push_back(1);
   }
 
   is_initialized = true;
@@ -63,23 +62,36 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	
 	std::default_random_engine gen;
 	
+	normal_distribution<double> N_x(0, std_pos[0]);
+	normal_distribution<double> N_y(0, std_pos[1]);
+	normal_distribution<double> N_theta(0, std_pos[2]);
+	
 	for(int i = 0; i < num_particles; i++)
 	{
 		double x_0 = particles[i].x;
 		double y_0 = particles[i].y;
 		double theta_0 = particles[i].theta;
 		
-		double x_f = x_0 + velocity / yaw_rate * (sin(theta_0 + yaw_rate * delta_t) - sin(theta_0));
-		double y_f = y_0 + velocity / yaw_rate * (cos(theta_0) - cos(theta_0 + yaw_rate * delta_t));
-		double theta_f = theta_0 + yaw_rate * delta_t;
+		double x_f;
+		double y_f;
+		double theta_f;
 		
-		normal_distribution<double> N_x(x_f, std_pos[0]);
-	    normal_distribution<double> N_y(y_f, std_pos[1]);
-		normal_distribution<double> N_theta(theta_f, std_pos[2]);
+		if(yaw_rate != 0)
+		{
+			x_f = x_0 + velocity / yaw_rate * (sin(theta_0 + yaw_rate * delta_t) - sin(theta_0));
+			y_f = y_0 + velocity / yaw_rate * (cos(theta_0) - cos(theta_0 + yaw_rate * delta_t));
+			theta_f = theta_0 + yaw_rate * delta_t;
+		}
+		else
+		{
+			x_f = x_0 + velocity * delta_t * cos(theta_0);
+			y_f = y_0 + velocity * delta_t * sin(theta_0);
+			theta_f = particles[i].theta;
+		}
 		
-		particles[i].x = N_x(gen);
-		particles[i].y = N_y(gen);
-		particles[i].theta = N_theta(gen);
+		particles[i].x = x_f + N_x(gen);
+		particles[i].y = y_f + N_y(gen);
+		particles[i].theta = theta_f + N_theta(gen);
 	}
 }
 
@@ -185,15 +197,33 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			particles[i].weight *= exp(-pow(x - M_x,2) / 2 / pow(std_landmark[0], 2) - pow(y - M_y, 2) / 2 / pow(std_landmark[1],2))
 									/ 2 / M_PI / std_landmark[0] / std_landmark[1];
 		}
+		
+		printf("Weight p %d %f \n", i, particles[i].weight );
 	}
 	
 }
 
 void ParticleFilter::resample() {
-	// TODO: Resample particles with replacement with probability proportional to their weight. 
-	// NOTE: You may find std::discrete_distribution helpful here.
-	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
-
+	/* TODO: Resample particles with replacement with probability proportional to their weight. 
+	   NOTE: You may find std::discrete_distribution helpful here.
+	     http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution */
+		 
+	/* get all weights*/
+	for (int i = 0; i < num_particles; i++) 
+	{
+		weights.push_back(particles[i].weight);
+    }
+	
+	default_random_engine gen;
+	discrete_distribution<int> distribution(weights.begin(), weights.end());
+	
+	vector<Particle> resample_particles;
+	
+	for(int i = 0; i < num_particles; i++)
+	{
+		resample_particles.push_back(particles[distribution(gen)]);
+	}
+	particles = resample_particles;
 }
 
 Particle ParticleFilter::SetAssociations(Particle& particle, const std::vector<int>& associations, 
